@@ -1,0 +1,36 @@
+[
+    {
+        "source": {
+            "name": "my-exchange"
+        },
+        "destination": {
+            "name": "my-wallet"
+        },
+        "transactionType": "buy",
+        "asset": "bitcoin",
+        "assetQuantity": 1.0,
+        "currency": "euros",
+        "currencyFees": "euros",
+        "currencyQuantity": 10000.0,
+        "currencyFeesQuantity": 1.0,
+        "sentDate": "2020-04-05T14:01:53Z",
+        "receivedDate": "2020-04-05T14:01:53Z"
+    },
+    {
+        "source": {
+            "name": "my-wallet"
+        },
+        "destination": {
+            "name": "my-exchange"
+        },
+        "transactionType": "sell",
+        "asset": "bitcoin",
+        "assetQuantity": 1.0,
+        "currency": "euros",
+        "currencyFees": "euros",
+        "currencyQuantity": 10000.0,
+        "currencyFeesQuantity": 1.0,
+        "sentDate": "2020-04-05T14:01:53Z",
+        "receivedDate": "2020-04-05T14:01:53Z"
+    }
+]
