@@ -75,19 +75,21 @@ pub struct Transactions {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Wallet {
-    quantity_by_asset: HashMap<Currency, HashMap<TransactionType, f64>>,
-    total_asset_cost: HashMap<Currency, HashMap<TransactionType, f64>>,
+    quantity_by_transaction_type_by_currency: HashMap<Currency, HashMap<TransactionType, f64>>,
+    total_cost_by_transaction_type_by_currency: HashMap<Currency, HashMap<TransactionType, f64>>,
 }
 impl Wallet {
     pub fn new(transactions: Transactions) -> Wallet {
         Wallet {
-            quantity_by_asset: transactions.get_quantity_by_asset(),
-            total_asset_cost: transactions.get_total_asset_cost(),
+            quantity_by_transaction_type_by_currency: transactions.get_quantity_by_transaction_type_by_currency(),
+            total_cost_by_transaction_type_by_currency: transactions.get_total_cost_by_transaction_type_by_currency(),
         }
     }
 }
 impl Transactions {
-    pub fn get_quantity_by_asset(&self) -> HashMap<Currency, HashMap<TransactionType, f64>> {
+    pub fn get_quantity_by_transaction_type_by_currency(
+        &self,
+    ) -> HashMap<Currency, HashMap<TransactionType, f64>> {
         self.transactions
             .clone()
             .into_iter()
@@ -111,7 +113,9 @@ impl Transactions {
             })
             .collect()
     }
-    pub fn get_total_asset_cost(&self) -> HashMap<Currency, HashMap<TransactionType, f64>> {
+    pub fn get_total_cost_by_transaction_type_by_currency(
+        &self,
+    ) -> HashMap<Currency, HashMap<TransactionType, f64>> {
         self.transactions
             .clone()
             .into_iter()
@@ -144,15 +148,15 @@ impl Transactions {
 mod tests {
     use super::*;
     #[test]
-    fn get_quantity_by_asset() {
+    fn get_quantity_by_transaction_type_by_currency() {
         let transaction1 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
         let transaction2 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         };
-        let quantity_by_asset = transactions.get_quantity_by_asset();
+        let quantity_by_transaction_type_by_currency = transactions.get_quantity_by_transaction_type_by_currency();
         assert_eq!(
-            quantity_by_asset
+            quantity_by_transaction_type_by_currency
                 .get(&Currency::BITCOIN)
                 .unwrap()
                 .get(&TransactionType::BUY),
@@ -160,15 +164,15 @@ mod tests {
         )
     }
     #[test]
-    fn get_total_asset_cost() {
+    fn get_total_cost_by_transaction_type_by_currency() {
         let transaction1 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
         let transaction2 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         };
-        let quantity_by_asset = transactions.get_total_asset_cost();
+        let quantity_by_transaction_type_by_currency = transactions.get_total_cost_by_transaction_type_by_currency();
         assert_eq!(
-            quantity_by_asset
+            quantity_by_transaction_type_by_currency
                 .get(&Currency::BITCOIN)
                 .unwrap()
                 .get(&TransactionType::BUY),
