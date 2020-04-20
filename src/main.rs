@@ -23,5 +23,5 @@ fn main() {
     let filename = matches.value_of("file").unwrap_or("./examples/wallet.json");
     let transactions = json_file_parser::get_transactions(filename);
     let wallet = transaction::Wallet::new(transactions);
-    println!("{}",serde_json::to_string(&wallet).unwrap());
+    println!("{}", serde_json::to_string(&wallet).unwrap());
 }

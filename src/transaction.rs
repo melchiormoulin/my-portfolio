@@ -19,35 +19,6 @@ pub struct Transaction {
     sent_date: DateTime<Utc>,
     received_date: DateTime<Utc>,
 }
-impl Transaction {
-    pub fn new_bitcoin_buy_transaction_exchange_euros(
-        asset_quantity: f64,
-        currency_quantity: f64,
-        currency_fees_quantity: f64,
-    ) -> Transaction {
-        let exchange_spot_trading = Entity {
-            name: String::from("exchange-spot-trading"),
-        };
-        let exchange_wallet = Entity {
-            name: String::from("my-exchange-wallet"),
-        };
-        let now = Utc::now();
-        Transaction {
-            source: exchange_spot_trading,
-            destination: exchange_wallet,
-            transaction_type: TransactionType::BUY,
-            asset: Currency::BITCOIN,
-            asset_quantity: asset_quantity,
-            currency: Currency::EUROS,
-            currency_quantity: currency_quantity,
-            currency_fees: Currency::EUROS,
-            currency_fees_quantity: currency_fees_quantity,
-            sent_date: now,
-            received_date: now,
-        }
-    }
-}
-
 #[derive(Serialize, Copy, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum TransactionType {
@@ -77,12 +48,14 @@ pub struct Transactions {
 pub struct Wallet {
     quantity_by_transaction_type_by_currency: HashMap<Currency, HashMap<TransactionType, f64>>,
     total_cost_by_transaction_type_by_currency: HashMap<Currency, HashMap<TransactionType, f64>>,
+    current_quantity_by_currency: HashMap<Currency,f64>,
 }
 impl Wallet {
     pub fn new(transactions: Transactions) -> Wallet {
         Wallet {
             quantity_by_transaction_type_by_currency: transactions.get_quantity_by_transaction_type_by_currency(),
             total_cost_by_transaction_type_by_currency: transactions.get_total_cost_by_transaction_type_by_currency(),
+            current_quantity_by_currency: transactions.get_current_quantity_by_currency()
         }
     }
 }
@@ -112,6 +85,14 @@ impl Transactions {
                 )
             })
             .collect()
+    }
+    pub fn get_current_quantity_by_currency(
+        &self,
+    ) -> HashMap<Currency,  f64> {
+        let quantity_by_transaction_by_currency=self.get_quantity_by_transaction_type_by_currency();
+        quantity_by_transaction_by_currency.into_iter().map(|(currency,transaction)| {
+           (currency ,(transaction.get(&TransactionType::BUY).unwrap() - transaction.get(&TransactionType::SELL).unwrap() ))
+        }).collect()
     }
     pub fn get_total_cost_by_transaction_type_by_currency(
         &self,
@@ -147,10 +128,36 @@ impl Transactions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    pub fn new_bitcoin_buy_transaction_exchange_euros(
+        asset_quantity: f64,
+        currency_quantity: f64,
+        currency_fees_quantity: f64,
+    ) -> Transaction {
+        let exchange_spot_trading = Entity {
+            name: String::from("exchange-spot-trading"),
+        };
+        let exchange_wallet = Entity {
+            name: String::from("my-exchange-wallet"),
+        };
+        let now = Utc::now();
+        Transaction {
+            source: exchange_spot_trading,
+            destination: exchange_wallet,
+            transaction_type: TransactionType::BUY,
+            asset: Currency::BITCOIN,
+            asset_quantity: asset_quantity,
+            currency: Currency::EUROS,
+            currency_quantity: currency_quantity,
+            currency_fees: Currency::EUROS,
+            currency_fees_quantity: currency_fees_quantity,
+            sent_date: now,
+            received_date: now,
+        }
+    }
     #[test]
     fn get_quantity_by_transaction_type_by_currency() {
-        let transaction1 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
-        let transaction2 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
+        let transaction1 = new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
+        let transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         };
@@ -165,8 +172,8 @@ mod tests {
     }
     #[test]
     fn get_total_cost_by_transaction_type_by_currency() {
-        let transaction1 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
-        let transaction2 = Transaction::new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
+        let transaction1 = new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
+        let transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         };
@@ -177,6 +184,23 @@ mod tests {
                 .unwrap()
                 .get(&TransactionType::BUY),
             Some(&204.0)
+        )
+    }
+    #[test]
+    fn get_quantity_by_currency() {
+        let transaction1 = new_bitcoin_buy_transaction_exchange_euros(1.6, 100.0, 2.0);
+        let mut transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.4, 200.0, 2.0);
+        transaction2.transaction_type = TransactionType::SELL;
+        let transactions = Transactions {
+            transactions: vec![transaction1, transaction2],
+        };
+        let quantity_by_currency = transactions.get_current_quantity_by_currency();
+        
+        assert_eq!(
+            format!("{:.5}",quantity_by_currency
+                .get(&Currency::BITCOIN)
+                .unwrap()),
+                format!("{:.5}", 1.2)
         )
     }
 }
