@@ -12,15 +12,16 @@ pub struct Transaction {
     destination: Entity,
     transaction_type: TransactionType,
     ticker: Ticker,
-    asset: String,
+    asset: Asset,
     asset_quantity: f64,
-    currency: Currency,
+    currency: Asset,
     currency_quantity: f64,
-    currency_fees: Currency,
+    currency_fees: Asset,
     currency_fees_quantity: f64,
     sent_date: DateTime<Utc>,
     received_date: DateTime<Utc>,
 }
+
 #[derive(Serialize, Copy, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum TransactionType {
@@ -29,15 +30,12 @@ pub enum TransactionType {
     TRANSFER,
 }
 
-pub type Currency = String;
+pub type Asset = String;
 
 pub type Ticker = String;
 
+pub type Entity = String;
 
-#[derive(Serialize, Debug, Deserialize, Clone)]
-pub struct Entity {
-    name: String,
-}
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Transactions {
@@ -148,12 +146,8 @@ mod tests {
         currency_quantity: f64,
         currency_fees_quantity: f64,
     ) -> Transaction {
-        let exchange_spot_trading = Entity {
-            name: String::from("exchange-spot-trading"),
-        };
-        let exchange_wallet = Entity {
-            name: String::from("my-exchange-wallet"),
-        };
+        let exchange_spot_trading = String::from("exchange-spot-trading");
+        let exchange_wallet = String::from("my-exchange-wallet");
         let now = Utc::now();
         Transaction {
             source: exchange_spot_trading,

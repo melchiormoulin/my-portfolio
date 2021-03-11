@@ -1,11 +1,7 @@
 [
     {
-        "source": {
-            "name": "my-exchange"
-        },
-        "destination": {
-            "name": "my-wallet"
-        },
+        "source": "my-exchange",
+        "destination": "my-wallet",
         "transactionType": "buy",
         "ticker": "BTC-USD",
         "asset": "bitcoin",
@@ -18,12 +14,8 @@
         "receivedDate": "2020-04-05T14:01:53Z"
     },
     {
-        "source": {
-            "name": "my-wallet"
-        },
-        "destination": {
-            "name": "my-exchange"
-        },
+        "source": "my-wallet",
+        "destination": "my-exchange",
         "ticker": "BTC-USD",
         "transactionType": "sell",
         "asset": "bitcoin",
