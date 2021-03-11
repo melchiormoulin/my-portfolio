@@ -28,14 +28,8 @@ pub enum TransactionType {
     SELL,
     TRANSFER,
 }
-#[derive(Serialize, Debug, Deserialize, Clone, PartialEq, Eq, Hash)]
-#[serde(rename_all = "lowercase")]
-pub enum Currency {
-    BITCOIN,
-    ETHEREUM,
-    XRP,
-    EUROS,
-}
+
+pub type Currency = String;
 
 pub type Ticker = String;
 
@@ -168,9 +162,9 @@ mod tests {
             asset: "bitcoin".to_string(),
             ticker: "BTC-USD".to_string(),
             asset_quantity: asset_quantity,
-            currency: Currency::EUROS,
+            currency: "euros".to_string(),
             currency_quantity: currency_quantity,
-            currency_fees: Currency::EUROS,
+            currency_fees: "euros".to_string(),
             currency_fees_quantity: currency_fees_quantity,
             sent_date: now,
             received_date: now,
