@@ -2,6 +2,7 @@ extern crate chrono;
 
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
 #[derive(Serialize, Deserialize, Clone)]
@@ -10,7 +11,8 @@ pub struct Transaction {
     source: Entity,
     destination: Entity,
     transaction_type: TransactionType,
-    asset: Currency,
+    ticker: Ticker,
+    asset: String,
     asset_quantity: f64,
     currency: Currency,
     currency_quantity: f64,
@@ -34,6 +36,10 @@ pub enum Currency {
     XRP,
     EUROS,
 }
+
+pub type Ticker = String;
+
+
 #[derive(Serialize, Debug, Deserialize, Clone)]
 pub struct Entity {
     name: String,
@@ -46,23 +52,27 @@ pub struct Transactions {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Wallet {
-    quantity_by_transaction_type_by_currency: HashMap<Currency, HashMap<TransactionType, f64>>,
-    total_cost_by_transaction_type_by_currency: HashMap<Currency, HashMap<TransactionType, f64>>,
-    current_quantity_by_currency: HashMap<Currency,f64>,
+    quantity_by_transaction_type_by_currency: HashMap<String, HashMap<TransactionType, f64>>,
+    total_cost_by_transaction_type_by_currency: HashMap<String, HashMap<TransactionType, f64>>,
+    current_quantity_by_currency: HashMap<String,f64>,
+    pub assets : Vec<String>,
+    pub tickers: HashSet<Ticker>
 }
 impl Wallet {
     pub fn new(transactions: Transactions) -> Wallet {
         Wallet {
-            quantity_by_transaction_type_by_currency: transactions.get_quantity_by_transaction_type_by_currency(),
+            quantity_by_transaction_type_by_currency: transactions.get_quantity_by_transaction_type_by_asset(),
             total_cost_by_transaction_type_by_currency: transactions.get_total_cost_by_transaction_type_by_currency(),
-            current_quantity_by_currency: transactions.get_current_quantity_by_currency()
+            current_quantity_by_currency: transactions.get_current_quantity_by_asset(),
+            assets: transactions.get_assets(),
+            tickers : transactions.get_tickers()
         }
     }
 }
 impl Transactions {
-    pub fn get_quantity_by_transaction_type_by_currency(
+    pub fn get_quantity_by_transaction_type_by_asset(
         &self,
-    ) -> HashMap<Currency, HashMap<TransactionType, f64>> {
+    ) -> HashMap<String, HashMap<TransactionType, f64>> {
         self.transactions
             .clone()
             .into_iter()
@@ -86,17 +96,28 @@ impl Transactions {
             })
             .collect()
     }
-    pub fn get_current_quantity_by_currency(
+    pub fn get_current_quantity_by_asset(
         &self,
-    ) -> HashMap<Currency,  f64> {
-        let quantity_by_transaction_by_currency=self.get_quantity_by_transaction_type_by_currency();
+    ) -> HashMap<String,  f64> {
+        let quantity_by_transaction_by_currency=self.get_quantity_by_transaction_type_by_asset();
         quantity_by_transaction_by_currency.into_iter().map(|(currency,transaction)| {
            (currency ,(transaction.get(&TransactionType::BUY).unwrap() - transaction.get(&TransactionType::SELL).unwrap() ))
         }).collect()
     }
+    pub fn get_assets(
+        &self,
+     )  -> Vec<String> {
+        let current_quantity_by_currency=self.get_current_quantity_by_asset();
+        current_quantity_by_currency.into_iter().filter(|(_,value)| *value >0.0).map(|(currency,_)| currency).collect()
+    }
+
+    pub fn  get_tickers(&self) -> HashSet<Ticker> {
+        self.transactions.clone().into_iter().map(|t|t.ticker).collect()
+
+    }
     pub fn get_total_cost_by_transaction_type_by_currency(
         &self,
-    ) -> HashMap<Currency, HashMap<TransactionType, f64>> {
+    ) -> HashMap<String, HashMap<TransactionType, f64>> {
         self.transactions
             .clone()
             .into_iter()
@@ -144,7 +165,8 @@ mod tests {
             source: exchange_spot_trading,
             destination: exchange_wallet,
             transaction_type: TransactionType::BUY,
-            asset: Currency::BITCOIN,
+            asset: "bitcoin".to_string(),
+            ticker: "BTC-USD".to_string(),
             asset_quantity: asset_quantity,
             currency: Currency::EUROS,
             currency_quantity: currency_quantity,
@@ -155,16 +177,16 @@ mod tests {
         }
     }
     #[test]
-    fn get_quantity_by_transaction_type_by_currency() {
+    fn get_quantity_by_transaction_type_by_asset() {
         let transaction1 = new_bitcoin_buy_transaction_exchange_euros(0.4, 100.0, 2.0);
         let transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.6, 100.0, 2.0);
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         };
-        let quantity_by_transaction_type_by_currency = transactions.get_quantity_by_transaction_type_by_currency();
+        let quantity_by_transaction_type_by_currency = transactions.get_quantity_by_transaction_type_by_asset();
         assert_eq!(
             quantity_by_transaction_type_by_currency
-                .get(&Currency::BITCOIN)
+                .get("bitcoin")
                 .unwrap()
                 .get(&TransactionType::BUY),
             Some(&1.0)
@@ -180,27 +202,50 @@ mod tests {
         let quantity_by_transaction_type_by_currency = transactions.get_total_cost_by_transaction_type_by_currency();
         assert_eq!(
             quantity_by_transaction_type_by_currency
-                .get(&Currency::BITCOIN)
+                .get("bitcoin")
                 .unwrap()
                 .get(&TransactionType::BUY),
             Some(&204.0)
         )
     }
     #[test]
-    fn get_quantity_by_currency() {
+    fn get_quantity_by_asset() {
         let transaction1 = new_bitcoin_buy_transaction_exchange_euros(1.6, 100.0, 2.0);
         let mut transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.4, 200.0, 2.0);
         transaction2.transaction_type = TransactionType::SELL;
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         };
-        let quantity_by_currency = transactions.get_current_quantity_by_currency();
+        let quantity_by_currency = transactions.get_current_quantity_by_asset();
         
         assert_eq!(
             format!("{:.5}",quantity_by_currency
-                .get(&Currency::BITCOIN)
+                .get("bitcoin")
                 .unwrap()),
                 format!("{:.5}", 1.2)
         )
+    }
+    #[test]
+    fn get_assets() {
+        let transaction1 = new_bitcoin_buy_transaction_exchange_euros(1.6, 100.0, 3.0);
+        let mut transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.4, 200.0, 2.0);
+        transaction2.transaction_type = TransactionType::SELL;
+        let transactions = Transactions {
+            transactions: vec![transaction1, transaction2],
+        }; 
+        let assets = transactions.get_assets();
+        assert_eq!(   *assets.get(0).unwrap(),"bitcoin") 
+
+    }
+    #[test]
+    fn get_tickers() {
+        let transaction1 = new_bitcoin_buy_transaction_exchange_euros(1.6, 100.0, 3.0);
+        let mut transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.4, 200.0, 2.0);
+        transaction2.transaction_type = TransactionType::SELL;
+        let transactions = Transactions {
+            transactions: vec![transaction1, transaction2],
+        }; 
+        let tickers = transactions.get_tickers();
+        assert_eq!(   tickers.get("BTC-USD").unwrap(),"BTC-USD") 
     }
 }

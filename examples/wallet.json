@@ -7,8 +7,9 @@
             "name": "my-wallet"
         },
         "transactionType": "buy",
+        "ticker": "BTC-USD",
         "asset": "bitcoin",
-        "assetQuantity": 1.0,
+        "assetQuantity": 2.0,
         "currency": "euros",
         "currencyFees": "euros",
         "currencyQuantity": 10000.0,
@@ -23,6 +24,7 @@
         "destination": {
             "name": "my-exchange"
         },
+        "ticker": "BTC-USD",
         "transactionType": "sell",
         "asset": "bitcoin",
         "assetQuantity": 1.0,
