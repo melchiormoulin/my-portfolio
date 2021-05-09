@@ -1,10 +1,8 @@
 # Handle your wallet based your asset transactions
 
-Based on transactions json file  ( see examples/wallet.json ) computes :
+Based on transactions json file  ( see examples/wallet.json ): 
+Print the asset value for each asset in your wallet every 60 sec. The quote is based on yahoo finance.
 
-- The quantity of currency by transaction type.
-- The Total cost of currency by transaction type.
-- Get current quantity of currency
 
 build it:
 

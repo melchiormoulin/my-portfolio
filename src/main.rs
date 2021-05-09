@@ -8,6 +8,8 @@ use yahoo_finance_api as yahoo;
 use clap::{App, Arg};
 mod json_file_parser;
 use tokio::runtime::Runtime;
+use std::{thread, time};
+
 
 
 async fn get_quote(ticker:&str) -> Result<f64, yahoo::YahooError> {
@@ -34,14 +36,22 @@ fn main() {
         )
         .get_matches();
     let filename = matches.value_of("file").unwrap_or("./examples/wallet.json");
+    //println!("{}", serde_json::to_string(&wallet).unwrap());
+    let rt  = Runtime::new().unwrap();
     let transactions = json_file_parser::get_transactions(filename);
     let wallet = transaction::Wallet::new(transactions);
-    println!("{}", serde_json::to_string(&wallet).unwrap());   
-    let rt  = Runtime::new().unwrap();
-    for ticker in wallet.tickers {
-        let quotes = rt.block_on(get_quote(&ticker[..]));
-        println!("{} quotes of the last minute: {:?}", ticker,quotes.unwrap());
+    loop {
+    for (currency,quantity) in &wallet.current_quantity_by_asset {
+        for ticker in wallet.tickers_by_assets.get(currency).unwrap() {
+            let quotes = rt.block_on(get_quote(&ticker[..]));
+            let quote = quotes.unwrap();
+            let value = quote*quantity;
+            println!("For asset \"{}\" with ticker \"{}\" the asset value in your wallet=quantity*quote={}*{}={}",currency, ticker,quantity,quote,value);
+        }
     }
+    thread::sleep(time::Duration::from_secs(60));
+}
+
 
 
 }

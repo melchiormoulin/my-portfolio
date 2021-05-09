@@ -2,7 +2,6 @@ extern crate chrono;
 
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use chrono::{DateTime, Utc};
 #[derive(Serialize, Deserialize, Clone)]
@@ -46,22 +45,33 @@ pub struct Transactions {
 pub struct Wallet {
     quantity_by_transaction_type_by_currency: HashMap<String, HashMap<TransactionType, f64>>,
     total_cost_by_transaction_type_by_currency: HashMap<String, HashMap<TransactionType, f64>>,
-    current_quantity_by_currency: HashMap<String,f64>,
-    pub assets : Vec<String>,
-    pub tickers: HashSet<Ticker>
+    pub current_quantity_by_asset: HashMap<String,f64>,
+    pub tickers_by_assets:HashMap<String, Vec<String>>
 }
 impl Wallet {
     pub fn new(transactions: Transactions) -> Wallet {
         Wallet {
             quantity_by_transaction_type_by_currency: transactions.get_quantity_by_transaction_type_by_asset(),
             total_cost_by_transaction_type_by_currency: transactions.get_total_cost_by_transaction_type_by_currency(),
-            current_quantity_by_currency: transactions.get_current_quantity_by_asset(),
-            assets: transactions.get_assets(),
-            tickers : transactions.get_tickers()
+            current_quantity_by_asset: transactions.get_current_quantity_by_asset(),
+            tickers_by_assets: transactions.get_tickers_by_assets()
         }
     }
 }
 impl Transactions {
+    pub fn get_tickers_by_assets(&self) -> HashMap<String, Vec<String>> {
+        self.transactions.clone().into_iter()
+        .group_by(|transaction| transaction.asset.clone())
+        .into_iter()
+        .map(|(asset, transaction)|
+        {(asset,
+            transaction
+            .into_iter()
+            .map(|transaction1| transaction1.ticker).unique().collect()
+        )}
+    ).collect()
+
+    }
     pub fn get_quantity_by_transaction_type_by_asset(
         &self,
     ) -> HashMap<String, HashMap<TransactionType, f64>> {
@@ -93,19 +103,8 @@ impl Transactions {
     ) -> HashMap<String,  f64> {
         let quantity_by_transaction_by_currency=self.get_quantity_by_transaction_type_by_asset();
         quantity_by_transaction_by_currency.into_iter().map(|(currency,transaction)| {
-           (currency ,(transaction.get(&TransactionType::BUY).unwrap() - transaction.get(&TransactionType::SELL).unwrap() ))
+           (currency ,(transaction.get(&TransactionType::BUY).unwrap_or(&0.0) - transaction.get(&TransactionType::SELL).unwrap_or(&0.0) ))
         }).collect()
-    }
-    pub fn get_assets(
-        &self,
-     )  -> Vec<String> {
-        let current_quantity_by_currency=self.get_current_quantity_by_asset();
-        current_quantity_by_currency.into_iter().filter(|(_,value)| *value >0.0).map(|(currency,_)| currency).collect()
-    }
-
-    pub fn  get_tickers(&self) -> HashSet<Ticker> {
-        self.transactions.clone().into_iter().map(|t|t.ticker).collect()
-
     }
     pub fn get_total_cost_by_transaction_type_by_currency(
         &self,
@@ -214,26 +213,14 @@ mod tests {
         )
     }
     #[test]
-    fn get_assets() {
+    fn get_tickers_by_assets() {
         let transaction1 = new_bitcoin_buy_transaction_exchange_euros(1.6, 100.0, 3.0);
         let mut transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.4, 200.0, 2.0);
         transaction2.transaction_type = TransactionType::SELL;
         let transactions = Transactions {
             transactions: vec![transaction1, transaction2],
         }; 
-        let assets = transactions.get_assets();
-        assert_eq!(   *assets.get(0).unwrap(),"bitcoin") 
-
-    }
-    #[test]
-    fn get_tickers() {
-        let transaction1 = new_bitcoin_buy_transaction_exchange_euros(1.6, 100.0, 3.0);
-        let mut transaction2 = new_bitcoin_buy_transaction_exchange_euros(0.4, 200.0, 2.0);
-        transaction2.transaction_type = TransactionType::SELL;
-        let transactions = Transactions {
-            transactions: vec![transaction1, transaction2],
-        }; 
-        let tickers = transactions.get_tickers();
-        assert_eq!(   tickers.get("BTC-USD").unwrap(),"BTC-USD") 
+        let tickers_by_assets = transactions.get_tickers_by_assets();
+        assert_eq!(tickers_by_assets.get("bitcoin").unwrap().get(0).unwrap(),"BTC-USD")
     }
 }
